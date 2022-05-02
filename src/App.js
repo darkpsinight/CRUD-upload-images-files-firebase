@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import { db } from './firebase-config';
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { storage } from "./firebase-config"
+import { ref, uploadBytes, listAll, getDownloadURL } from 'firebase/storage'
+import { v4 } from 'uuid'
 
 function App() {
 
@@ -39,6 +42,37 @@ function App() {
     getUsers()
   }, [])
 
+  //upload image
+  const [imageUpload, setimageUpload] = useState(null)
+
+  const uploadImage = () => {
+    if (imageUpload == null) return
+    const imageRef = ref(storage, `images/${imageUpload.name + v4()}`)
+    uploadBytes(imageRef, imageUpload).then((snapshot) => {
+      alert("Image uploaded!")
+      getDownloadURL(snapshot.ref).then((url) => {
+        setimageList((prev) => [...prev, url])
+      })
+    })
+  }
+
+  //render uploaded images
+  const [imageList, setimageList] = useState([])
+  const imageListRef = ref(storage, "images/")
+
+  useEffect(() => {
+    listAll(imageListRef).then((response) => {
+      /* console.log(response) */
+      response.items.forEach((item) => {
+        getDownloadURL(item).then((url) => {
+          setimageList((prev) => [...prev, url])
+        })
+      })
+    })
+  }, [])
+
+
+
 
   return (
     <div className="App">
@@ -57,6 +91,19 @@ function App() {
         }}
       />
       <button onClick={createUser}>Create User</button>
+      <ul>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(event) => {
+            setimageUpload(event.target.files[0])
+          }}
+        />
+        <button onClick={uploadImage}>Upload image</button>
+        {imageList.map((url) => {
+          return <ul><img src={url} style={{ width: "100px" }} /></ul>
+        })}
+      </ul>
 
       {users.map((user) => {
         return (
